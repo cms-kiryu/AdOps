@@ -180,10 +180,6 @@
             memo: { pages: [{ id: '1', title: '', blocks: [{ type: 'p', text: '' }] }], currentPageId: '1' }
         };
 
-        // ※すでに以前の順番がブラウザ（ローカルストレージ）に保存されている場合は、
-        // 以下の1行のコメントアウトを外して一度リロードすると、新しいデフォルト順序にリセットできます。
-        // state.tabOrder = tabList.map(t => t.id);
-
         function saveState() { localStorage.setItem('adOpsStatePro', JSON.stringify(state)); }
 
         // --- 2. タブ並び替え (Drag and Drop) ---
@@ -251,12 +247,100 @@
         document.querySelectorAll('#view-utm input').forEach(i => i.oninput = generateUtm);
         document.getElementById('copy-utm-btn').onclick = () => { navigator.clipboard.writeText(document.getElementById('utm-result').value); alert('Copied!'); };
 
+        // --- 広告文生成 ロジック復元 ---
+        document.getElementById('adcopy-platform').value = state.adcopy.platform || 'Meta';
+        document.getElementById('adcopy-product-info').value = state.adcopy.productInfo || '';
+        document.getElementById('adcopy-result').value = state.adcopy.result || '';
+
+        document.getElementById('adcopy-platform').onchange = (e) => { state.adcopy.platform = e.target.value; saveState(); };
+        document.getElementById('adcopy-product-info').oninput = (e) => { state.adcopy.productInfo = e.target.value; saveState(); };
+
         document.getElementById('adcopy-generate-btn').onclick = async () => {
-            const plat = document.getElementById('adcopy-platform').value;
-            const url = document.getElementById('adcopy-product-info').value;
+            const platform = document.getElementById('adcopy-platform').value;
+            const targetUrl = document.getElementById('adcopy-product-info').value.trim();
+            if (!targetUrl) { alert('商材情報URLを入力してください。'); return; }
+
+            const btn = document.getElementById('adcopy-generate-btn');
             const resArea = document.getElementById('adcopy-result');
-            resArea.value = `[媒体]${plat}\n[商材情報]\n(ここにページ情報を解析したテキストが挿入されます)\nURL: ${url}`;
+            const originalBtnText = btn.innerHTML;
+            
+            btn.innerHTML = 'ページ内容を抽出中...';
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            resArea.value = 'URLからテキストを抽出しています...';
+
+            const extractedText = await fetchUrlText(targetUrl);
+            const resultText = `[媒体]${platform}\n[商材情報]\n${extractedText}`;
+            resArea.value = resultText;
+            
+            state.adcopy.result = resultText;
+            saveState();
+
+            btn.innerHTML = originalBtnText;
+            btn.disabled = false;
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
         };
+
+        document.getElementById('copy-adcopy-btn').onclick = () => {
+            const resArea = document.getElementById('adcopy-result');
+            if(resArea.value) {
+                resArea.select();
+                document.execCommand('copy');
+                const btn = document.getElementById('copy-adcopy-btn');
+                const orig = btn.innerHTML;
+                btn.innerHTML = 'コピー完了✓';
+                btn.classList.add('text-green-600');
+                setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('text-green-600'); }, 2000);
+            }
+        };
+
+        async function fetchUrlText(url) {
+            const proxies = [
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+                `https://corsproxy.io/?${encodeURIComponent(url)}`
+            ];
+
+            let htmlContent = null;
+
+            for (const proxyUrl of proxies) {
+                try {
+                    const response = await fetch(proxyUrl);
+                    if (!response.ok) continue;
+                    htmlContent = await response.text();
+                    if (htmlContent) break;
+                } catch (e) {
+                }
+            }
+
+            if (!htmlContent) {
+                return `(サイトのセキュリティ設定などにより抽出できませんでした。URL: ${url})`;
+            }
+
+            try {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(htmlContent, 'text/html');
+                
+                // h1〜h6、および p 要素のみをピンポイントで取得
+                const targetElements = doc.querySelectorAll('h1, h2, h3, h4, h5, h6, p');
+                let textArray = [];
+                targetElements.forEach(el => {
+                    const textContent = (el.innerText || el.textContent || '').trim();
+                    if (textContent) {
+                        textArray.push(textContent.replace(/\s+/g, ' '));
+                    }
+                });
+
+                let text = textArray.join('\n');
+                if (text.length > 2000) text = text.substring(0, 2000) + '\n...[省略されました]';
+                if (!text.trim()) return "(指定されたURLから有効なテキスト要素(h1-h6, p)を抽出できませんでした。)";
+
+                return text;
+            } catch (error) {
+                return `(抽出したデータの解析に失敗しました。URL: ${url})`;
+            }
+        }
+
 
         // --- 4. メモ (Notion風) ロジック ---
         const memoEditor = {
@@ -264,12 +348,28 @@
             slashMenuIndex: -1,
             init() {
                 document.getElementById('memo-add-page').onclick = () => this.addPage();
-                document.getElementById('memo-title').oninput = (e) => {
+                
+                const titleEl = document.getElementById('memo-title');
+                titleEl.oninput = (e) => {
                     const p = state.memo.pages.find(p => p.id === state.memo.currentPageId);
                     p.title = e.target.innerText;
                     this.renderPageList();
                     saveState();
                 };
+                
+                // タイトル欄でのEnterキー制御（改行を防ぎ、本文へ移動）
+                titleEl.onkeydown = (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const blocks = document.querySelectorAll('#memo-blocks .notion-block');
+                        if (blocks.length > 0) {
+                            blocks[0].focus();
+                        } else {
+                            titleEl.blur();
+                        }
+                    }
+                };
+
                 this.renderPageList();
                 this.loadPage(state.memo.currentPageId);
             },
