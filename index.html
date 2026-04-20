@@ -3,25 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web広告運用アシスタント</title>
+    <title>Web広告運用アシスタント Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', 'Noto Sans JP', sans-serif;
-            background-color: #f3f4f6;
-        }
-        /* カスタムスクロールバー */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
+        body { font-family: 'Inter', 'Noto Sans JP', sans-serif; background-color: #f3f4f6; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
-        .tab-active {
-            background-color: #eff6ff;
-            color: #2563eb;
-            border-right: 3px solid #2563eb;
-        }
+        .tab-active { background-color: #eff6ff; color: #2563eb; border-right: 3px solid #2563eb; }
+        .dragging { opacity: 0.5; background: #e5e7eb; }
+        
+        /* Notion-like Styles */
+        .notion-block:empty::before { content: attr(data-placeholder); color: #cbd5e1; pointer-events: none; }
+        .block-h1 { font-size: 1.875rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+        .block-h2 { font-size: 1.5rem; font-weight: 600; margin-top: 1.25rem; margin-bottom: 0.4rem; }
+        .block-h3 { font-size: 1.25rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.3rem; }
+        .block-bullet { display: list-item; list-style-type: disc; margin-left: 1.5rem; }
+        .block-todo { font-size: 1rem; margin-top: 0.1rem; margin-bottom: 0.1rem; }
+        .notion-editor [contenteditable]:focus { outline: none; }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden text-gray-800">
@@ -34,310 +34,495 @@
             </div>
         </div>
         
-        <nav class="flex-1 py-4 flex flex-col gap-1">
-            <button class="nav-btn tab-active flex items-center gap-3 px-6 py-3 text-sm font-medium hover:bg-gray-50 transition-colors text-left text-blue-600" data-target="utm">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                UTMパラメータ生成
-            </button>
-            <button class="nav-btn flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors text-left" data-target="fee">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-                手数料計算
-            </button>
-            <button class="nav-btn flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors text-left" data-target="adcopy">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                広告文生成
-            </button>
-            <button class="nav-btn flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors text-left" data-target="simulation">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-                シミュレーション
-            </button>
-        </nav>
+        <nav id="nav-container" class="flex-1 py-4 flex flex-col gap-1 overflow-y-auto">
+            </nav>
 
-        <div class="p-4 border-t border-gray-100 text-xs text-gray-400 text-center">
-            自動保存有効
+        <div class="p-4 border-t border-gray-100 text-[10px] text-gray-400 text-center">
+            タブをドラッグして並び替え可能<br>自動保存有効
         </div>
     </aside>
 
-    <main class="flex-1 overflow-y-auto relative bg-gray-50/50">
+    <main id="main-content" class="flex-1 overflow-hidden relative bg-gray-50/50">
         
-        <div id="view-utm" class="view-section p-8 max-w-4xl mx-auto h-full">
+        <div id="view-utm" class="view-section hidden p-8 max-w-4xl mx-auto h-full overflow-y-auto">
             <h2 class="text-2xl font-bold mb-2">UTMパラメータ一括ビルダー</h2>
-            <p class="text-gray-500 mb-8 text-sm">広告の遷移先URLにトラッキング用のパラメータを正確に付与します。</p>
-
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mt-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                     <div class="md:col-span-2">
-                        <label class="block text-xs font-medium text-gray-700 mb-1">ベースURL <span class="text-red-500">*</span></label>
-                        <input type="url" id="utm-url" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="https://example.com/lp">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">ベースURL *</label>
+                        <input type="url" id="utm-url" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="https://example.com">
                     </div>
-                    
                     <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Campaign Source (参照元) <span class="text-red-500">*</span></label>
-                        <div class="relative pb-6">
-                            <input type="text" id="utm-source" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none mb-1" placeholder="例: google, meta, yahoo">
-                            <div class="flex flex-wrap gap-1 mt-1">
-                                <button type="button" class="text-[10px] bg-gray-100 hover:bg-gray-200 px-1.5 py-0.5 rounded border border-gray-200 transition-colors" onclick="document.getElementById('utm-source').value='google'; generateUTM()">Google</button>
-                                <button type="button" class="text-[10px] bg-gray-100 hover:bg-gray-200 px-1.5 py-0.5 rounded border border-gray-200 transition-colors" onclick="document.getElementById('utm-source').value='meta'; generateUTM()">Meta</button>
-                                <button type="button" class="text-[10px] bg-gray-100 hover:bg-gray-200 px-1.5 py-0.5 rounded border border-gray-200 transition-colors" onclick="document.getElementById('utm-source').value='yahoo'; generateUTM()">Yahoo</button>
-                                <button type="button" class="text-[10px] bg-gray-100 hover:bg-gray-200 px-1.5 py-0.5 rounded border border-gray-200 transition-colors" onclick="document.getElementById('utm-source').value='line'; generateUTM()">LINE</button>
-                                <button type="button" class="text-[10px] bg-gray-100 hover:bg-gray-200 px-1.5 py-0.5 rounded border border-gray-200 transition-colors" onclick="document.getElementById('utm-source').value='arift'; generateUTM()">ARIFT</button>
-                            </div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Source *</label>
+                        <input type="text" id="utm-source" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="google">
+                        <div class="flex flex-wrap gap-1 mt-1">
+                            <button class="text-[10px] bg-gray-100 px-1.5 rounded" onclick="setUtm('source','google')">Google</button>
+                            <button class="text-[10px] bg-gray-100 px-1.5 rounded" onclick="setUtm('source','meta')">Meta</button>
+                            <button class="text-[10px] bg-gray-100 px-1.5 rounded" onclick="setUtm('source','yahoo')">Yahoo</button>
+                            <button class="text-[10px] bg-gray-100 px-1.5 rounded" onclick="setUtm('source','line')">LINE</button>
+                            <button class="text-[10px] bg-gray-100 px-1.5 rounded" onclick="setUtm('source','arift')">ARIFT</button>
                         </div>
                     </div>
-                    
                     <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Campaign Medium (メディア) <span class="text-red-500">*</span></label>
-                        <div class="relative pb-6">
-                            <input type="text" id="utm-medium" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none mb-1" placeholder="例: cpc, display, video">
-                            <div class="flex flex-wrap gap-1 mt-1">
-                                <button type="button" class="text-[10px] bg-gray-100 hover:bg-gray-200 px-1.5 py-0.5 rounded border border-gray-200 transition-colors" onclick="document.getElementById('utm-medium').value='cpc'; generateUTM()">cpc</button>
-                                <button type="button" class="text-[10px] bg-gray-100 hover:bg-gray-200 px-1.5 py-0.5 rounded border border-gray-200 transition-colors" onclick="document.getElementById('utm-medium').value='display'; generateUTM()">display</button>
-                                <button type="button" class="text-[10px] bg-gray-100 hover:bg-gray-200 px-1.5 py-0.5 rounded border border-gray-200 transition-colors" onclick="document.getElementById('utm-medium').value='video'; generateUTM()">video</button>
-                                <button type="button" class="text-[10px] bg-gray-100 hover:bg-gray-200 px-1.5 py-0.5 rounded border border-gray-200 transition-colors" onclick="document.getElementById('utm-medium').value='reels'; generateUTM()">reels</button>
-                            </div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Medium *</label>
+                        <input type="text" id="utm-medium" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500" placeholder="cpc">
+                        <div class="flex flex-wrap gap-1 mt-1">
+                            <button class="text-[10px] bg-gray-100 px-1.5 rounded" onclick="setUtm('medium','cpc')">cpc</button>
+                            <button class="text-[10px] bg-gray-100 px-1.5 rounded" onclick="setUtm('medium','display')">display</button>
+                            <button class="text-[10px] bg-gray-100 px-1.5 rounded" onclick="setUtm('medium','video')">video</button>
+                            <button class="text-[10px] bg-gray-100 px-1.5 rounded" onclick="setUtm('medium','reels')">reels</button>
                         </div>
                     </div>
-                    
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Campaign Name (キャンペーン名)</label>
-                        <input type="text" id="utm-campaign" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例: 2024_spring_sale">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Campaign Term (検索キーワード等)</label>
-                        <input type="text" id="utm-term" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例: 広告代理店_東京">
-                    </div>
-
-                    <div class="md:col-span-2">
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Campaign Content (広告クリエイティブ等)</label>
-                        <input type="text" id="utm-content" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例: banner_blue_v1">
-                    </div>
+                    <div><label class="block text-xs font-medium text-gray-700 mb-1">Campaign</label><input type="text" id="utm-campaign" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 outline-none"></div>
+                    <div><label class="block text-xs font-medium text-gray-700 mb-1">Term</label><input type="text" id="utm-term" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 outline-none"></div>
+                    <div class="md:col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">Content</label><input type="text" id="utm-content" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 outline-none"></div>
                 </div>
-
-                <div class="mt-8 pt-6 border-t border-gray-100">
-                    <h3 class="text-sm font-semibold mb-2">生成されたURL</h3>
+                <div class="mt-6 pt-6 border-t border-gray-100">
+                    <h3 class="text-sm font-semibold mb-2">生成URL</h3>
                     <div class="relative">
-                        <textarea id="utm-result" readonly class="w-full h-24 text-sm font-mono bg-gray-50 border border-gray-300 rounded-lg p-3 outline-none resize-none break-all"></textarea>
-                        <button id="copy-utm-btn" class="absolute bottom-3 right-3 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-medium py-1 px-3 rounded shadow-sm transition-colors flex items-center gap-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                            コピー
-                        </button>
+                        <textarea id="utm-result" readonly class="w-full h-24 text-xs font-mono bg-gray-50 border border-gray-300 rounded-lg p-3 outline-none resize-none break-all"></textarea>
+                        <button id="copy-utm-btn" class="absolute bottom-3 right-3 bg-white border border-gray-300 text-xs py-1 px-3 rounded shadow-sm">コピー</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div id="view-fee" class="view-section hidden p-4 md:p-6 w-full h-full flex flex-col">
-            <h2 class="text-xl font-bold mb-1">手数料計算</h2>
-            <p class="text-gray-500 mb-4 text-sm">スプレッドシート上で手数料の計算を行います。</p>
-
-            <div class="flex-1 w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div id="view-fee" class="view-section hidden w-full h-full flex flex-col p-6">
+            <h2 class="text-xl font-bold mb-4">手数料計算</h2>
+            <div class="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <iframe src="https://docs.google.com/spreadsheets/d/1jCflvBOXJTXeb5ukrHkmkiwph0kUpgvN/edit?gid=502505479#gid=502505479" class="w-full h-full" frameborder="0"></iframe>
             </div>
         </div>
 
-        <div id="view-adcopy" class="view-section hidden p-8 max-w-4xl mx-auto h-full flex flex-col">
-            <h2 class="text-2xl font-bold mb-2">広告文生成 プロンプト作成</h2>
-            <p class="text-gray-500 mb-8 text-sm">媒体と商材情報を入力してプロンプトを作成し、専用のAIアシスタント（Gem）に貼り付けてください。</p>
-
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-6">
-                <div class="space-y-5">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">媒体選択 <span class="text-red-500">*</span></label>
-                        <select id="adcopy-platform" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                            <option value="Meta">Meta</option>
-                            <option value="Googleリスティング">Googleリスティング</option>
-                            <option value="Googleデマンドジェネレーション">Googleデマンドジェネレーション</option>
-                            <option value="Yahoo!リスティング">Yahoo!リスティング</option>
-                            <option value="Yahoo!ディスプレイ">Yahoo!ディスプレイ</option>
-                            <option value="LINE">LINE</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">商材情報URL <span class="text-red-500">*</span></label>
-                        <input type="url" id="adcopy-product-info" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500" placeholder="例: https://example.com/lp">
-                        <p class="text-[10px] text-gray-400 mt-1">※URLからページ内のテキストを自動抽出します。</p>
-                    </div>
-                    <button id="adcopy-generate-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg shadow-sm transition-colors mt-2 text-sm flex justify-center items-center">
-                        完了
-                    </button>
+        <div id="view-adcopy" class="view-section hidden p-8 max-w-4xl mx-auto h-full overflow-y-auto">
+            <h2 class="text-2xl font-bold mb-2">広告文生成 プロンプト</h2>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mt-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">媒体選択</label>
+                    <select id="adcopy-platform" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 outline-none bg-white">
+                        <option value="Meta">Meta</option>
+                        <option value="Googleリスティング">Googleリスティング</option>
+                        <option value="Googleデマンドジェネレーション">Googleデマンドジェネレーション</option>
+                        <option value="Yahoo!リスティング">Yahoo!リスティング</option>
+                        <option value="Yahoo!ディスプレイ">Yahoo!ディスプレイ</option>
+                        <option value="LINE">LINE</option>
+                    </select>
                 </div>
-            </div>
-
-            <div class="mt-2 pt-6 border-t border-gray-100 flex-1 flex flex-col">
-                <div class="relative flex-1 min-h-[150px]">
-                    <textarea id="adcopy-result" readonly class="w-full h-full text-sm bg-gray-50 border border-gray-300 rounded-lg p-4 outline-none resize-none"></textarea>
-                    <button id="copy-adcopy-btn" class="absolute bottom-3 right-3 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-medium py-1 px-3 rounded shadow-sm transition-colors flex items-center gap-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                        コピー
-                    </button>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">商材URL</label>
+                    <input type="url" id="adcopy-product-info" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 outline-none" placeholder="https://example.com/lp">
                 </div>
-
-                <div class="mt-6 flex justify-center pb-8">
-                    <a href="https://gemini.google.com/gem/1bfpJ6RxLyLQSRGG7gVbD55WHIToqCFYy?usp=sharing" target="_blank" class="inline-flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg shadow-md transition-colors text-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                        AIアシスタント (Gem) を開く
-                    </a>
+                <button id="adcopy-generate-btn" class="w-full bg-blue-600 text-white font-medium py-2 rounded-lg text-sm">プロンプト作成</button>
+                <div class="relative">
+                    <textarea id="adcopy-result" readonly class="w-full h-48 text-sm bg-gray-50 border border-gray-300 rounded-lg p-4 outline-none resize-none"></textarea>
+                    <button id="copy-adcopy-btn" class="absolute bottom-3 right-3 bg-white border border-gray-300 text-xs py-1 px-3 rounded shadow-sm">コピー</button>
+                </div>
+                <div class="text-center">
+                    <a href="https://gemini.google.com/gem/1bfpJ6RxLyLQSRGG7gVbD55WHIToqCFYy?usp=sharing" target="_blank" class="text-blue-600 text-sm font-medium hover:underline">Gemini (広告文生成Gem) を開く →</a>
                 </div>
             </div>
         </div>
 
-        <div id="view-simulation" class="view-section hidden w-full h-full flex flex-col">
+        <div id="view-simulation" class="view-section hidden w-full h-full">
             <iframe src="https://cms-kiryu.github.io/simulation/" class="w-full h-full" frameborder="0"></iframe>
         </div>
 
+        <div id="view-banner" class="view-section hidden w-full h-full flex flex-col p-6">
+            <h2 class="text-xl font-bold mb-4">レポート バナー計算用</h2>
+            <div class="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <iframe src="https://docs.google.com/spreadsheets/d/1yxGSgyFIROnmSzk8doVQqdGSSe1EF5kL-Bl_zL_b68k/edit?gid=0#gid=0" class="w-full h-full" frameborder="0"></iframe>
+            </div>
+        </div>
+
+        <div id="view-memo" class="view-section hidden w-full h-full flex flex-col overflow-hidden">
+            <div class="flex h-full">
+                <div class="w-48 bg-gray-50 border-r border-gray-200 p-4 flex flex-col gap-2 flex-shrink-0">
+                    <div class="text-xs font-bold text-gray-400 mb-2">PAGES</div>
+                    <div id="memo-page-list" class="flex flex-col gap-1 overflow-y-auto"></div>
+                    <button id="memo-add-page" class="mt-auto text-xs text-gray-500 hover:text-blue-600 flex items-center gap-1">+ New Page</button>
+                </div>
+                <div class="flex-1 flex flex-col bg-white overflow-hidden">
+                    <div class="p-8 max-w-3xl mx-auto w-full h-full overflow-y-auto notion-editor">
+                        <h1 id="memo-title" contenteditable="true" class="text-4xl font-bold mb-8 outline-none empty:before:content-['タイトルを入力'] empty:before:text-gray-200" data-placeholder="タイトルを入力"></h1>
+                        <div id="memo-blocks" class="space-y-1"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 
-    <script>
-        // --- 共通: タブ切り替えとローカルストレージ ---
-        const navBtns = document.querySelectorAll('.nav-btn');
-        const views = document.querySelectorAll('.view-section');
+    <div id="slash-menu" class="hidden fixed z-50 bg-white border border-gray-200 rounded-lg shadow-xl py-2 w-48 text-sm">
+        <div class="px-3 py-1 text-[10px] text-gray-400 font-bold">BASIC BLOCKS</div>
+        <div class="slash-menu-item hover:bg-gray-100 px-3 py-1.5 cursor-pointer" data-type="h1" onclick="memoEditor.setBlockType('h1')">Heading 1</div>
+        <div class="slash-menu-item hover:bg-gray-100 px-3 py-1.5 cursor-pointer" data-type="h2" onclick="memoEditor.setBlockType('h2')">Heading 2</div>
+        <div class="slash-menu-item hover:bg-gray-100 px-3 py-1.5 cursor-pointer" data-type="h3" onclick="memoEditor.setBlockType('h3')">Heading 3</div>
+        <div class="slash-menu-item hover:bg-gray-100 px-3 py-1.5 cursor-pointer" data-type="bullet" onclick="memoEditor.setBlockType('bullet')">Bullet List</div>
+        <div class="slash-menu-item hover:bg-gray-100 px-3 py-1.5 cursor-pointer" data-type="todo" onclick="memoEditor.setBlockType('todo')">To-do List</div>
+        <div class="slash-menu-item hover:bg-gray-100 px-3 py-1.5 cursor-pointer" data-type="p" onclick="memoEditor.setBlockType('p')">Text</div>
+    </div>
 
-        let adOpsData = JSON.parse(localStorage.getItem('adOpsAssistData')) || {
-            utm: {}, adcopy: {}
+    <script>
+        // --- 1. 基本設定と状態管理 ---
+        const tabList = [
+            { id: 'memo', label: 'メモ', icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' },
+            { id: 'adcopy', label: '広告文作成', icon: 'M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z' },
+            { id: 'utm', label: 'UTMパラメータ生成', icon: 'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71' },
+            { id: 'fee', label: 'レポート用 手数料計算', icon: 'M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' },
+            { id: 'banner', label: 'レポート用 バナー計算', icon: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5' },
+            { id: 'simulation', label: 'シミュレーション', icon: 'M3 3v18h18M19 9-5 5-4-4-3 3' }
+        ];
+
+        let state = JSON.parse(localStorage.getItem('adOpsStatePro')) || {
+            tabOrder: tabList.map(t => t.id),
+            activeTab: 'memo',
+            utm: {},
+            adcopy: {},
+            memo: { pages: [{ id: '1', title: '', blocks: [{ type: 'p', text: '' }] }], currentPageId: '1' }
         };
 
-        function switchTab(targetId) {
-            navBtns.forEach(btn => {
-                btn.classList.remove('tab-active', 'text-blue-600');
-                btn.classList.add('text-gray-600');
-                if(btn.dataset.target === targetId) {
-                    btn.classList.add('tab-active', 'text-blue-600');
-                    btn.classList.remove('text-gray-600');
-                }
-            });
+        // ※すでに以前の順番がブラウザ（ローカルストレージ）に保存されている場合は、
+        // 以下の1行のコメントアウトを外して一度リロードすると、新しいデフォルト順序にリセットできます。
+        // state.tabOrder = tabList.map(t => t.id);
 
-            views.forEach(view => {
-                view.classList.add('hidden');
-                if(view.id === `view-${targetId}`) {
-                    view.classList.remove('hidden');
-                }
-            });
-        }
+        function saveState() { localStorage.setItem('adOpsStatePro', JSON.stringify(state)); }
 
-        navBtns.forEach(btn => {
-            btn.addEventListener('click', () => switchTab(btn.dataset.target));
-        });
-
-        function saveData() {
-            localStorage.setItem('adOpsAssistData', JSON.stringify(adOpsData));
-        }
-
-        // --- ツール1: UTMパラメータ ---
-        const utmInputs = ['url', 'source', 'medium', 'campaign', 'term', 'content'].map(id => document.getElementById(`utm-${id}`));
-        const utmResult = document.getElementById('utm-result');
-
-        utmInputs.forEach(input => {
-            const key = input.id.replace('utm-', '');
-            input.value = adOpsData.utm[key] || '';
-            input.addEventListener('input', generateUTM);
-        });
-
-        function generateUTM() {
-            let baseUrl = document.getElementById('utm-url').value.trim();
-            const source = document.getElementById('utm-source').value.trim();
-            const medium = document.getElementById('utm-medium').value.trim();
-            const campaign = document.getElementById('utm-campaign').value.trim();
-            const term = document.getElementById('utm-term').value.trim();
-            const content = document.getElementById('utm-content').value.trim();
-
-            adOpsData.utm = { url: baseUrl, source, medium, campaign, term, content };
-            saveData();
-
-            if (!baseUrl) {
-                utmResult.value = '';
-                return;
-            }
-
-            try {
-                if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
-                    baseUrl = 'https://' + baseUrl;
-                }
-                const urlObj = new URL(baseUrl);
+        // --- 2. タブ並び替え (Drag and Drop) ---
+        function renderSidebar() {
+            const container = document.getElementById('nav-container');
+            container.innerHTML = '';
+            state.tabOrder.forEach(tabId => {
+                const tabData = tabList.find(t => t.id === tabId);
+                const btn = document.createElement('button');
+                btn.className = `nav-btn flex items-center gap-3 px-6 py-3 text-sm font-medium transition-colors text-left ${state.activeTab === tabId ? 'tab-active' : 'text-gray-600 hover:bg-gray-50'}`;
+                btn.setAttribute('data-target', tabId);
+                btn.setAttribute('draggable', 'true');
+                btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><path d="${tabData.icon}"/></svg> ${tabData.label}`;
                 
-                if (source) urlObj.searchParams.set('utm_source', source); else urlObj.searchParams.delete('utm_source');
-                if (medium) urlObj.searchParams.set('utm_medium', medium); else urlObj.searchParams.delete('utm_medium');
-                if (campaign) urlObj.searchParams.set('utm_campaign', campaign); else urlObj.searchParams.delete('utm_campaign');
-                if (term) urlObj.searchParams.set('utm_term', term); else urlObj.searchParams.delete('utm_term');
-                if (content) urlObj.searchParams.set('utm_content', content); else urlObj.searchParams.delete('utm_content');
-
-                utmResult.value = urlObj.toString();
-            } catch (e) {
-                utmResult.value = '無効なURL形式です';
-            }
+                btn.onclick = () => switchTab(tabId);
+                
+                // D&D Events
+                btn.ondragstart = (e) => { e.target.classList.add('dragging'); e.dataTransfer.setData('text/plain', tabId); };
+                btn.ondragend = (e) => e.target.classList.remove('dragging');
+                btn.ondragover = (e) => e.preventDefault();
+                btn.ondrop = (e) => {
+                    e.preventDefault();
+                    const draggedId = e.dataTransfer.getData('text/plain');
+                    const targetId = tabId;
+                    if (draggedId === targetId) return;
+                    
+                    const oldOrder = [...state.tabOrder];
+                    const draggedIdx = oldOrder.indexOf(draggedId);
+                    const targetIdx = oldOrder.indexOf(targetId);
+                    
+                    oldOrder.splice(draggedIdx, 1);
+                    oldOrder.splice(targetIdx, 0, draggedId);
+                    state.tabOrder = oldOrder;
+                    saveState();
+                    renderSidebar();
+                };
+                
+                container.appendChild(btn);
+            });
         }
 
-        document.getElementById('copy-utm-btn').addEventListener('click', () => {
-            if(utmResult.value && utmResult.value !== '無効なURL形式です') {
-                try {
-                    utmResult.select();
-                    document.execCommand('copy');
-                    const btn = document.getElementById('copy-utm-btn');
-                    const orig = btn.innerHTML;
-                    btn.innerHTML = 'コピー完了✓';
-                    btn.classList.add('text-green-600');
-                    setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('text-green-600'); }, 2000);
-                } catch (err) { alert('コピーに失敗しました。'); }
-            }
-        });
-        generateUTM();
+        function switchTab(id) {
+            state.activeTab = id;
+            document.querySelectorAll('.view-section').forEach(v => v.classList.add('hidden'));
+            document.getElementById(`view-${id}`).classList.remove('hidden');
+            saveState();
+            renderSidebar();
+        }
 
-        // --- ツール3: 広告文生成 ---
-        const adcopyPlatform = document.getElementById('adcopy-platform');
-        const adcopyProductInfo = document.getElementById('adcopy-product-info');
-        const adcopyGenerateBtn = document.getElementById('adcopy-generate-btn');
-        const adcopyResult = document.getElementById('adcopy-result');
-
-        async function fetchUrlText(url) {
-            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+        // --- 3. 既存機能ロジック (UTM, AdCopy) ---
+        function setUtm(key, val) { document.getElementById(`utm-${key}`).value = val; generateUtm(); }
+        function generateUtm() {
+            let base = document.getElementById('utm-url').value;
+            if(!base) return;
             try {
-                const response = await fetch(proxyUrl);
-                const data = await response.json();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(data.contents, 'text/html');
-                const targetElements = doc.querySelectorAll('h1, h2, h3, h4, h5, h6, p');
-                let textArray = [];
-                targetElements.forEach(el => {
-                    const textContent = (el.innerText || el.textContent || '').trim();
-                    if (textContent) textArray.push(textContent.replace(/\s+/g, ' '));
+                let url = new URL(base.startsWith('http') ? base : 'https://'+base);
+                const params = { source: 'utm_source', medium: 'utm_medium', campaign: 'utm_campaign', term: 'utm_term', content: 'utm_content' };
+                Object.keys(params).forEach(k => {
+                    const val = document.getElementById(`utm-${k}`).value;
+                    if(val) url.searchParams.set(params[k], val);
                 });
-                return textArray.join('\n').substring(0, 2000);
-            } catch (error) {
-                return `(抽出失敗: ${url})`;
-            }
+                document.getElementById('utm-result').value = url.toString();
+            } catch(e) {}
         }
+        document.querySelectorAll('#view-utm input').forEach(i => i.oninput = generateUtm);
+        document.getElementById('copy-utm-btn').onclick = () => { navigator.clipboard.writeText(document.getElementById('utm-result').value); alert('Copied!'); };
 
-        adcopyPlatform.value = adOpsData.adcopy.platform || 'Meta';
-        adcopyProductInfo.value = adOpsData.adcopy.productInfo || '';
-        adcopyResult.value = adOpsData.adcopy.result || '';
+        document.getElementById('adcopy-generate-btn').onclick = async () => {
+            const plat = document.getElementById('adcopy-platform').value;
+            const url = document.getElementById('adcopy-product-info').value;
+            const resArea = document.getElementById('adcopy-result');
+            resArea.value = `[媒体]${plat}\n[商材情報]\n(ここにページ情報を解析したテキストが挿入されます)\nURL: ${url}`;
+        };
 
-        adcopyGenerateBtn.addEventListener('click', async () => {
-            const platform = adcopyPlatform.value;
-            const targetUrl = adcopyProductInfo.value.trim();
-            if (!targetUrl) return;
+        // --- 4. メモ (Notion風) ロジック ---
+        const memoEditor = {
+            currentBlock: null,
+            slashMenuIndex: -1,
+            init() {
+                document.getElementById('memo-add-page').onclick = () => this.addPage();
+                document.getElementById('memo-title').oninput = (e) => {
+                    const p = state.memo.pages.find(p => p.id === state.memo.currentPageId);
+                    p.title = e.target.innerText;
+                    this.renderPageList();
+                    saveState();
+                };
+                this.renderPageList();
+                this.loadPage(state.memo.currentPageId);
+            },
+            addPage() {
+                const id = Date.now().toString();
+                state.memo.pages.push({ id, title: '', blocks: [{ type: 'p', text: '' }] });
+                this.loadPage(id);
+                this.renderPageList();
+                document.getElementById('memo-title').focus();
+            },
+            deletePage(id) {
+                if (confirm('このメモを削除してもよろしいですか？')) {
+                    state.memo.pages = state.memo.pages.filter(p => p.id !== id);
+                    if (state.memo.pages.length === 0) {
+                        const newId = Date.now().toString();
+                        state.memo.pages.push({ id: newId, title: '', blocks: [{ type: 'p', text: '' }] });
+                        this.loadPage(newId);
+                    } else if (state.memo.currentPageId === id) {
+                        this.loadPage(state.memo.pages[0].id);
+                    } else {
+                        this.renderPageList();
+                        saveState();
+                    }
+                }
+            },
+            renderPageList() {
+                const list = document.getElementById('memo-page-list');
+                list.innerHTML = '';
+                state.memo.pages.forEach(p => {
+                    const el = document.createElement('div');
+                    el.className = `group flex items-center justify-between px-2 py-1 text-xs rounded cursor-pointer ${state.memo.currentPageId === p.id ? 'bg-blue-100 text-blue-700 font-bold' : 'hover:bg-gray-200 text-gray-600'}`;
+                    
+                    const titleEl = document.createElement('div');
+                    titleEl.className = 'truncate flex-1';
+                    titleEl.innerText = p.title || 'タイトルを入力';
+                    titleEl.onclick = () => this.loadPage(p.id);
+                    el.appendChild(titleEl);
 
-            adcopyGenerateBtn.disabled = true;
-            adcopyResult.value = '抽出中...';
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 ml-2 focus:outline-none';
+                    deleteBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>';
+                    deleteBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        this.deletePage(p.id);
+                    };
+                    el.appendChild(deleteBtn);
 
-            const extractedText = await fetchUrlText(targetUrl);
-            const resultText = `[媒体]${platform}\n[商材情報]\n${extractedText}`;
-            adcopyResult.value = resultText;
-            
-            adOpsData.adcopy.result = resultText;
-            saveData();
-            adcopyGenerateBtn.disabled = false;
-        });
+                    list.appendChild(el);
+                });
+            },
+            loadPage(id) {
+                state.memo.currentPageId = id;
+                const page = state.memo.pages.find(p => p.id === id);
+                document.getElementById('memo-title').innerText = page.title;
+                const container = document.getElementById('memo-blocks');
+                container.innerHTML = '';
+                page.blocks.forEach((b, idx) => container.appendChild(this.createBlock(b, idx)));
+                this.renderPageList();
+                saveState();
+            },
+            createBlock(blockData, idx) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'notion-block-wrapper relative flex items-start group min-h-[1.5em] w-full';
 
-        document.getElementById('copy-adcopy-btn').addEventListener('click', () => {
-            if(adcopyResult.value) {
-                adcopyResult.select();
-                document.execCommand('copy');
-                const btn = document.getElementById('copy-adcopy-btn');
-                const orig = btn.innerHTML;
-                btn.innerHTML = 'コピー完了✓';
-                setTimeout(() => { btn.innerHTML = orig; }, 2000);
+                let editorEl = document.createElement('div');
+                editorEl.contentEditable = 'true';
+                editorEl.dataset.placeholder = "自由に入力してください。/で見出しを作成できます。";
+                editorEl.innerText = blockData.text;
+
+                if (blockData.type === 'todo') {
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.className = 'mt-1.5 mr-2 cursor-pointer flex-shrink-0';
+                    cb.contentEditable = 'false';
+                    cb.checked = !!blockData.checked;
+                    cb.onchange = (e) => {
+                        if(e.target.checked) {
+                            editorEl.classList.add('line-through', 'text-gray-400');
+                        } else {
+                            editorEl.classList.remove('line-through', 'text-gray-400');
+                        }
+                        this.updateState();
+                    };
+                    wrapper.appendChild(cb);
+                    
+                    editorEl.className = `notion-block outline-none px-1 py-0.5 rounded hover:bg-gray-50 transition-colors flex-1 block-todo`;
+                    if (cb.checked) {
+                        editorEl.classList.add('line-through', 'text-gray-400');
+                    }
+                } else {
+                    editorEl.className = `notion-block outline-none px-1 py-0.5 rounded hover:bg-gray-50 transition-colors w-full block-${blockData.type}`;
+                }
+
+                editorEl.onkeydown = (e) => {
+                    const menu = document.getElementById('slash-menu');
+                    if (!menu.classList.contains('hidden')) {
+                        if (e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            this.navigateSlashMenu(1);
+                            return;
+                        } else if (e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            this.navigateSlashMenu(-1);
+                            return;
+                        } else if (e.key === 'Enter') {
+                            e.preventDefault();
+                            this.selectSlashMenu();
+                            return;
+                        } else if (e.key === 'Escape') {
+                            e.preventDefault();
+                            this.hideSlashMenu();
+                            return;
+                        }
+                    }
+
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.insertBlock(idx + 1, blockData.type);
+                    }
+                    if (e.key === 'Backspace' && editorEl.innerText === '') {
+                        e.preventDefault();
+                        if (blockData.type !== 'p') {
+                            this.setBlockType('p', editorEl);
+                        } else {
+                            this.removeBlock(idx);
+                        }
+                    }
+                };
+
+                editorEl.oninput = (e) => {
+                    if (editorEl.innerText === '/') {
+                        this.showSlashMenu(editorEl);
+                    } else {
+                        this.hideSlashMenu();
+                    }
+                    this.updateState();
+                };
+
+                wrapper.appendChild(editorEl);
+                return wrapper;
+            },
+            updateState() {
+                const page = state.memo.pages.find(p => p.id === state.memo.currentPageId);
+                page.blocks = Array.from(document.querySelectorAll('#memo-blocks .notion-block-wrapper')).map(wrapper => {
+                    const el = wrapper.querySelector('.notion-block');
+                    const type = Array.from(el.classList).find(c => c.startsWith('block-')).replace('block-', '');
+                    const block = { type, text: el.innerText };
+                    if (type === 'todo') {
+                        const cb = wrapper.querySelector('input[type="checkbox"]');
+                        block.checked = cb ? cb.checked : false;
+                    }
+                    return block;
+                });
+                saveState();
+            },
+            insertBlock(idx, inheritType = 'p') {
+                this.updateState();
+                const page = state.memo.pages.find(p => p.id === state.memo.currentPageId);
+                let newType = 'p';
+                if (inheritType === 'bullet' || inheritType === 'todo') {
+                    newType = inheritType;
+                }
+                page.blocks.splice(idx, 0, { type: newType, text: '' });
+                this.loadPage(state.memo.currentPageId);
+                const blocks = document.querySelectorAll('#memo-blocks .notion-block');
+                if(blocks[idx]) blocks[idx].focus();
+            },
+            removeBlock(idx) {
+                this.updateState();
+                const page = state.memo.pages.find(p => p.id === state.memo.currentPageId);
+                if (page.blocks.length <= 1) return;
+                page.blocks.splice(idx, 1);
+                this.loadPage(state.memo.currentPageId);
+                const blocks = document.querySelectorAll('#memo-blocks .notion-block');
+                if (blocks[idx - 1]) {
+                    blocks[idx - 1].focus();
+                    const sel = window.getSelection();
+                    sel.selectAllChildren(blocks[idx - 1]);
+                    sel.collapseToEnd();
+                }
+            },
+            showSlashMenu(el) {
+                this.currentBlock = el;
+                const rect = el.getBoundingClientRect();
+                const menu = document.getElementById('slash-menu');
+                menu.style.top = `${rect.bottom + window.scrollY}px`;
+                menu.style.left = `${rect.left + window.scrollX}px`;
+                menu.classList.remove('hidden');
+
+                // 選択状態の初期化
+                this.slashMenuIndex = 0;
+                const items = document.querySelectorAll('.slash-menu-item');
+                items.forEach(i => i.classList.remove('bg-gray-100'));
+                if (items.length > 0) items[0].classList.add('bg-gray-100');
+            },
+            hideSlashMenu() { 
+                document.getElementById('slash-menu').classList.add('hidden'); 
+                this.slashMenuIndex = -1;
+            },
+            navigateSlashMenu(dir) {
+                const items = document.querySelectorAll('.slash-menu-item');
+                if (items.length === 0) return;
+                
+                if (this.slashMenuIndex >= 0) {
+                    items[this.slashMenuIndex].classList.remove('bg-gray-100');
+                }
+                
+                this.slashMenuIndex += dir;
+                if (this.slashMenuIndex < 0) this.slashMenuIndex = items.length - 1;
+                if (this.slashMenuIndex >= items.length) this.slashMenuIndex = 0;
+                
+                items[this.slashMenuIndex].classList.add('bg-gray-100');
+            },
+            selectSlashMenu() {
+                const items = document.querySelectorAll('.slash-menu-item');
+                if (this.slashMenuIndex >= 0 && this.slashMenuIndex < items.length) {
+                    const type = items[this.slashMenuIndex].dataset.type;
+                    this.setBlockType(type);
+                } else {
+                    this.hideSlashMenu();
+                }
+            },
+            setBlockType(type, targetBlock = this.currentBlock) {
+                if (!targetBlock) return;
+                this.updateState();
+                const blocks = Array.from(document.querySelectorAll('#memo-blocks .notion-block'));
+                const idx = blocks.indexOf(targetBlock);
+                
+                if (idx > -1) {
+                    const page = state.memo.pages.find(p => p.id === state.memo.currentPageId);
+                    page.blocks[idx].type = type;
+                    if (type === 'todo') page.blocks[idx].checked = false;
+                    page.blocks[idx].text = targetBlock.innerText.replace(/^\//, '');
+                    saveState();
+                    this.loadPage(state.memo.currentPageId);
+                    const newBlocks = document.querySelectorAll('#memo-blocks .notion-block');
+                    if (newBlocks[idx]) {
+                        newBlocks[idx].focus();
+                        const sel = window.getSelection();
+                        sel.selectAllChildren(newBlocks[idx]);
+                        sel.collapseToEnd();
+                    }
+                }
+                this.hideSlashMenu();
             }
-        });
+        };
+
+        // --- 初期化 ---
+        window.onload = () => {
+            renderSidebar();
+            switchTab(state.activeTab);
+            memoEditor.init();
+        };
 
     </script>
 </body>
